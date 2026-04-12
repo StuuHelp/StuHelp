@@ -27,10 +27,12 @@ function checkPushBanner() {
     const banner = document.getElementById('push-banner');
     if (!banner) return;
     const asked = localStorage.getItem('push_asked');
-    if (Notification.permission === 'granted' || asked) {
+    const hasNotif = typeof Notification !== 'undefined';
+    if ((hasNotif && Notification.permission === 'granted') || asked) {
         banner.classList.add('hidden');
     } else {
-        banner.classList.remove('hidden');
+        if (hasNotif) banner.classList.remove('hidden');
+        else banner.classList.add('hidden');
     }
 }
 
@@ -111,11 +113,67 @@ function navigateTo(targetScreenId) {
     });
 }
 
-// 1. Splash Screen Logic
-setTimeout(() => {
-    if (screens.splash) screens.splash.classList.add('fade-out');
-    setTimeout(() => navigateTo('screen-register'), 400);
-}, 800);
+// User Data Store
+const userData = {
+    firstName: '',
+    lastName: '',
+    gender: '',
+    birthdate: '',
+    uni: ''
+};
+
+// 1. Splash Screen Logic & Session Check
+let bypassSplash = false;
+const savedStore = localStorage.getItem('stuhelp_user');
+if (localStorage.getItem('stuhelp_logged_in') === 'true' && savedStore) {
+    try {
+        const parsed = JSON.parse(savedStore);
+        userData.firstName = parsed.firstName || '';
+        userData.lastName = parsed.lastName || '';
+        userData.gender = parsed.gender || '';
+        userData.birthdate = parsed.birthdate || '';
+        userData.uni = parsed.university || '';
+        
+        // Update displays immediately
+        document.getElementById('display-name').textContent = (userData.firstName || 'Имя') + ' ' + (userData.lastName || 'Фамилия');
+        document.getElementById('display-uni').textContent = userData.uni || 'Университет не выбран';
+        
+        // Pre-fill edit profile form
+        const editFirstName = document.getElementById('edit-first-name');
+        const editLastName = document.getElementById('edit-last-name');
+        const editGender = document.getElementById('edit-gender');
+        const editBirthdate = document.getElementById('edit-birthdate');
+        const editUni = document.getElementById('edit-uni');
+        if(editFirstName) editFirstName.value = userData.firstName;
+        if(editLastName) editLastName.value = userData.lastName;
+        if(editGender) editGender.value = userData.gender;
+        if(editBirthdate) editBirthdate.value = userData.birthdate;
+        if(editUni) editUni.value = userData.uni;
+
+        bypassSplash = true;
+        
+        // Instantly hide splash and transition to main
+        if (screens.splash) {
+            screens.splash.style.display = 'none';
+        }
+        
+        setTimeout(() => {
+            navigateTo('screen-main');
+        }, 10);
+    } catch(err) {
+        console.error("Session parse err:", err);
+    }
+}
+
+if (!bypassSplash) {
+    setTimeout(() => {
+        if (screens.splash) {
+            screens.splash.style.display = 'flex'; // restore just in case
+            screens.splash.classList.add('fade-out');
+        }
+        setTimeout(() => navigateTo('screen-register'), 400);
+    }, 800);
+}
 
 // ── EmailJS Config ────────────────────────────────────────
 const EMAILJS_SERVICE_ID  = 'service_7yzwv0n';
@@ -305,17 +363,11 @@ btnResend.addEventListener('click', () => {
     }
 });
 
-// User Data Store
-const userData = {
-    firstName: '',
-    lastName: '',
-    gender: '',
-    birthdate: '',
-    uni: ''
-};
+
 
 // 4. Profile Logic
 const btnProfileNext = document.getElementById('btn-profile-next');
+
 
 btnProfileNext.addEventListener('click', () => {
     const firstName = document.getElementById('first-name').value;
@@ -335,9 +387,23 @@ btnProfileNext.addEventListener('click', () => {
     document.getElementById('display-uni').textContent = userData.uni || 'Университет не выбран';
 
     if (firstName && lastName && gender) {
-        navigateTo('screen-main');
+        saveSessionAndNavigate();
     } else {
         // Just for prototype, allow moving forward even if empty
+        saveSessionAndNavigate();
+    }
+
+    function saveSessionAndNavigate() {
+        localStorage.setItem('stuhelp_user', JSON.stringify({
+            email: localStorage.getItem('user_email') || 'user@gmail.com',
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            gender: userData.gender,
+            birthdate: userData.birthdate,
+            university: userData.uni,
+            registeredAt: Date.now()
+        }));
+        localStorage.setItem('stuhelp_logged_in', 'true');
         navigateTo('screen-main');
     }
 });
@@ -625,7 +691,8 @@ if(screenCreateAd) screens['createAd'] = screenCreateAd;
 const btnOpenCreateAd = document.getElementById('btn-open-create-ad');
 const btnCreateAdBack = document.getElementById('btn-create-ad-back');
 
-let myAds = JSON.parse(localStorage.getItem('myAds')) || [];
+let myAdsData = JSON.parse(localStorage.getItem('myAds'));
+let myAds = myAdsData || [];
 let stuhelpResponses = JSON.parse(localStorage.getItem('stuhelp_responses')) || [];
 let stuhelpChats = JSON.parse(localStorage.getItem('stuhelp_chats')) || [];
 let editingAdId = null;
@@ -812,6 +879,8 @@ urgencyPills.forEach(pill => {
     });
 });
 
+
+
 // Publish Button and Feed Logic
 const btnPublishAd = document.getElementById('btn-publish-ad');
 const feedContainer = document.getElementById('feed-container');
@@ -822,6 +891,8 @@ if(btnPublishAd && feedContainer) {
         const description = document.getElementById('ad-description').value || 'Без описания';
         const price = document.getElementById('ad-price').value || 'Договорная';
         const urgency = document.getElementById('ad-urgency') ? document.getElementById('ad-urgency').value : '';
+
+
 
         if (editingAdId !== null) {
             // Update
