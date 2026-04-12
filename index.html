@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>StuHelp</title>
+    <link rel="stylesheet" href="style.css?v=2">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+</head>
+<body>
+    <!-- Welcome Modal -->
+    <div id="welcome-modal" class="welcome-modal hidden-modal">
+        <div class="welcome-overlay"></div>
+        <div class="welcome-content">
+            <h1 class="splash-logo" style="margin-bottom: 20px;">StuHelp</h1>
+            
+            <div class="author-card">
+                <div class="author-avatar">SH</div>
+                <div class="author-info">
+                    <h3 class="author-name">Tleukenov Reval</h3>
+                    <p class="author-subtitle">Platform Creator</p>
+                </div>
+            </div>
+
+            <div class="welcome-text">
+                <p>Добро пожаловать на StuHelp — инновационную платформу для студентов!</p>
+                <p>Здесь вы можете находить и предлагать академические услуги, обмениваться знаниями и легко находить помощь по любым заданиям.</p>
+            </div>
+
+            <button id="btn-enter-stuhelp" class="btn-primary" style="color: #000; letter-spacing: 0.05em;">Enter StuHelp</button>
+        </div>
+    </div>
+
+    <!-- Confirm Delete Modal -->
+    <div id="delete-confirm-modal" class="welcome-modal hidden-modal">
+        <div class="welcome-overlay" id="delete-overlay"></div>
+        <div class="welcome-content" style="padding: 25px; align-items: center; text-align: center;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ff4d4d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 15px;"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+            <h3 style="margin-bottom: 10px; font-size: 1.2rem;">Вы уверены?</h3>
+            <p style="color: rgba(255,255,255,0.6); font-size: 0.95rem; margin-bottom: 20px;">Вы действительно хотите удалить это объявление? Это действие необратимо.</p>
+            <div style="display: flex; gap: 10px; width: 100%;">
+                <button id="btn-cancel-delete" class="btn-primary" style="flex: 1; background-color: rgba(255,255,255,0.1); color: white;">Отмена</button>
+                <button id="btn-confirm-delete" class="btn-primary" style="flex: 1; background-color: #ff4d4d; color: white;">Удалить</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-container">
+        <!-- 1. Splash Screen -->
+        <div id="screen-splash" class="screen active">
+            <div class="splash-content">
+                <p class="splash-welcome">Добро пожаловать в</p>
+                <h1 class="splash-logo">StuHelp</h1>
+            </div>
+        </div>
+
+        <!-- 2. Registration Screen -->
+        <div id="screen-register" class="screen slide-right">
+            <div class="screen-content">
+                <h1 class="logo">StuHelp</h1>
+                <div class="form-container">
+                    <input type="email" id="email-input" placeholder="@email" class="line-input">
+                    <button id="btn-get-code" class="btn-primary">Получить код</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. OTP Verification Screen -->
+        <div id="screen-otp" class="screen slide-right">
+            <div class="screen-content">
+                <h1 class="logo">StuHelp</h1>
+                <div class="form-container">
+                    <div class="otp-inputs">
+                        <input type="text" maxlength="1" class="otp-box">
+                        <input type="text" maxlength="1" class="otp-box">
+                        <input type="text" maxlength="1" class="otp-box">
+                        <input type="text" maxlength="1" class="otp-box">
+                    </div>
+                    <button id="btn-resend" class="btn-primary hidden" disabled>отправить повторно</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Profile Setup Screen -->
+        <div id="screen-profile" class="screen slide-right">
+            <div class="screen-content">
+                <h1 class="logo">StuHelp</h1>
+                <div class="form-container profile-form">
+                    <input type="text" id="first-name" placeholder="Имя" class="line-input">
+                    <input type="text" id="last-name" placeholder="Фамилия" class="line-input">
+                    
+                    <div class="gender-selection">
+                        <label class="gender-label">
+                            <input type="radio" name="gender" value="male">
+                            <span class="gender-pill">муж</span>
+                        </label>
+                        <label class="gender-label">
+                            <input type="radio" name="gender" value="female">
+                            <span class="gender-pill">жен</span>
+                        </label>
+                    </div>
+
+                    <!-- University Selector -->
+                    <div class="uni-selector-container" id="open-uni-sheet">
+                        <input type="text" id="uni-input" placeholder="Выберите университет" class="uni-selector" readonly>
+                        <svg class="dropdown-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </div>
+
+                    <button id="btn-profile-next" class="btn-primary">Дальше</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Main App Screen -->
+        <!-- 5. Main App Screen -->
+        <div id="screen-main" class="screen slide-right">
+            <!-- Notification Banner -->
+            <div id="push-banner" class="push-banner hidden">
+                <div class="push-banner-text">Включить уведомления об откликах?</div>
+                <div class="push-banner-actions">
+                    <button id="btn-push-yes" class="btn-push">Да</button>
+                    <button id="btn-push-no" class="btn-push outline">Нет</button>
+                </div>
+            </div>
+            
+            <header class="main-header">
+                <h2>StuHelp</h2>
+            </header>
+            <main class="main-content">
+                
+                <!-- Tab: Search / Feed -->
+                <div id="tab-search" class="tab-pane active fade-in">
+                    <div class="feed-filters">
+                        <button class="feed-filter-pill" data-filter="high">🔴 Высокая</button>
+                        <button class="feed-filter-pill" data-filter="medium">🟡 Средняя</button>
+                        <button class="feed-filter-pill" data-filter="low">🟢 Низкая</button>
+                    </div>                    <!-- Cards Feed -->
+                    <div class="feed-container" id="feed-container">
+                        <!-- Обьявления будут подгружаться сюда динамически (JS / Backend) -->
+                    </div>
+                </div>
+
+                <!-- Tab: Messages -->
+                <div id="tab-messages" class="tab-pane fade-in">
+                    <div id="messages-container" class="messages-container">
+                        <div class="empty-state" id="messages-empty-state">
+                            <p>У вас пока нет входящих откликов</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Chat -->
+                <div id="tab-chat" class="tab-pane fade-in">
+                    <div id="chat-list-container" class="chat-list-container">
+                        <div class="empty-state" id="chat-empty-state">
+                            <p>У вас пока нет диалогов</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Profile -->
+                <div id="tab-profile" class="tab-pane fade-in">
+                    <div class="profile-tab-content">
+                        <div class="profile-header-card">
+                            <div class="profile-info">
+                                <h3 id="display-name">Имя Фамилия</h3>
+                                <p id="display-uni">Универ</p>
+                            </div>
+                            <div class="profile-avatar">
+                                <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            </div>
+                        </div>
+                        <button class="btn-edit-profile">Редактировать</button>
+                        <button class="btn-edit-profile create-ad-btn" id="btn-open-create-ad" style="margin-top: 15px; background-color: var(--accent); color: #000;">Создать объявление</button>
+                        
+                        <!-- My Ads Section -->
+                        <div class="my-ads-section">
+                            <h4 class="my-ads-title">Мои объявления</h4>
+                            <div id="my-ads-container" class="my-ads-container">
+                                <!-- Ads will be rendered here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+            <nav class="bottom-nav">
+                <button class="nav-item active" data-target="tab-search">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                </button>
+                <button class="nav-item" data-target="tab-messages">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                </button>
+                <button class="nav-item" data-target="tab-chat">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                </button>
+                <button class="nav-item" data-target="tab-profile">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </button>
+            </nav>
+        </div>
+        
+        <!-- 6. Profile Edit Screen -->
+        <div id="screen-edit-profile" class="screen slide-right">
+            <header class="edit-header">
+                <button id="btn-edit-back" class="btn-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <h2>Основная информация</h2>
+                <div style="width: 44px;"></div> <!-- spacer -->
+            </header>
+            <div class="screen-content form-container edit-profile-form">
+                
+                <div class="edit-input-group">
+                    <label>Фамилия</label>
+                    <input type="text" id="edit-last-name" class="edit-input" placeholder="Фамилия">
+                </div>
+                
+                <div class="edit-input-group">
+                    <label>Имя</label>
+                    <input type="text" id="edit-first-name" class="edit-input" placeholder="Имя">
+                </div>
+
+                <div class="edit-input-group selector-group" id="open-gender-sheet">
+                    <label>Пол</label>
+                    <input type="text" id="edit-gender" class="edit-input" placeholder="Пол" readonly>
+                    <svg class="chevron-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+
+                <div class="edit-input-group selector-group" id="open-date-sheet">
+                    <label>Дата рождения</label>
+                    <input type="text" id="edit-birthdate" class="edit-input" placeholder="Дата рождения" readonly>
+                    <svg class="calendar-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                </div>
+
+                <div class="edit-input-group selector-group" id="open-edit-uni-sheet">
+                    <label>Университет</label>
+                    <input type="text" id="edit-uni" class="edit-input" placeholder="Университет" readonly>
+                    <svg class="chevron-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+
+                <div id="edit-profile-error" class="error-text" style="color:#ff4d4d; margin-top:-10px; margin-bottom:15px; font-size:0.85rem; font-weight:600; display:none; text-align:center;">Все поля обязательны к заполнению</div>
+
+                <button id="btn-save-profile" class="btn-primary fixed-bottom-btn">Сохранить</button>
+            </div>
+        </div>
+
+        <!-- 7. Create Ad Screen -->
+        <div id="screen-create-ad" class="screen slide-right">
+            <header class="edit-header">
+                <button id="btn-create-ad-back" class="btn-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <h2 id="create-ad-title">Создать объявление</h2>
+                <div style="width: 44px;"></div> <!-- spacer -->
+            </header>
+            <div class="screen-content form-container edit-profile-form" style="padding-bottom: 100px;">
+                
+                <div class="edit-input-group selector-group" id="open-spec-sheet">
+                    <label>Специальность</label>
+                    <input type="text" id="ad-specialty" class="edit-input" placeholder="Выберите специальность" readonly>
+                    <svg class="chevron-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+                
+                <div class="edit-input-group">
+                    <label>Описание</label>
+                    <div class="textarea-wrapper">
+                        <textarea id="ad-description" class="edit-input textarea-input" placeholder="Опишите ваше задание подробно..." rows="4"></textarea>
+                        <div class="char-counter" id="ad-char-counter">0 / 500</div>
+                    </div>
+                </div>
+
+                <div class="edit-input-group">
+                    <label>Срочность</label>
+                    <div class="urgency-group">
+                        <button class="urgency-pill high">Высокая</button>
+                        <button class="urgency-pill medium">Средняя</button>
+                        <button class="urgency-pill low">Низкая</button>
+                    </div>
+                    <input type="hidden" id="ad-urgency" value="">
+                </div>
+                
+                <div class="edit-input-group">
+                    <label>Цена</label>
+                    <div class="price-input-container">
+                        <input type="number" id="ad-price" class="edit-input" placeholder="Укажите цену">
+                        <span class="currency-suffix">тг</span>
+                    </div>
+                </div>
+
+                <button id="btn-publish-ad" class="btn-primary fixed-bottom-btn" style="background-color: var(--accent); color: #000;">Опубликовать</button>
+            </div>
+        </div>
+
+        <!-- 8. Chat Room Screen -->
+        <div id="screen-chat-room" class="screen slide-right">
+            <header class="edit-header" style="justify-content: space-between;">
+                <button id="btn-chat-back" class="btn-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <div class="chat-header-info" style="text-align: center; flex-grow: 1;">
+                    <h2 id="chat-room-name" style="font-size: 1.1rem; margin-bottom: 2px;">Имя</h2>
+                    <p id="chat-room-uni" style="font-size: 0.8rem; color: rgba(255,255,255,0.6); margin: 0;">Университет</p>
+                </div>
+                <div style="width: 44px;"></div> <!-- spacer -->
+            </header>
+            <div id="chat-messages-container" class="chat-messages-container" style="flex: 1; overflow-y: auto; padding: 15px; padding-bottom: 80px; display: flex; flex-direction: column; gap: 10px;">
+                <!-- Chat bubbles will go here -->
+            </div>
+            <div class="chat-input-area" style="position: absolute; bottom: 0; left: 0; right: 0; background: #121212; padding: 10px 15px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; gap: 10px; align-items: center; z-index: 10;">
+                <input type="text" id="chat-input-field" placeholder="Сообщение..." style="flex: 1; background: rgba(255,255,255,0.1); border: none; border-radius: 20px; padding: 12px 15px; color: #fff; font-size: 0.95rem; outline: none;">
+                <button id="btn-send-message" style="background: var(--accent); color: #000; border: none; border-radius: 50%; width: 44px; height: 44px; display: flex; justify-content: center; align-items: center; cursor: pointer;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Bottom Sheet Container (Uni Selector) -->
+    <div id="uni-bottom-sheet" class="bottom-sheet">
+        <div class="sheet-overlay" id="close-uni-sheet"></div>
+        <div class="sheet-content">
+            <div class="sheet-header">
+                <div class="sheet-drag-handle"></div>
+                <input type="text" id="uni-search" class="sheet-search" placeholder="Поиск университета...">
+            </div>
+            <div class="sheet-list" id="uni-list">
+                <div class="uni-item">Международный инженерно-технологический университет</div>
+                <div class="uni-item">«Q» University</div>
+                <div class="uni-item">Almaty Management University</div>
+                <div class="uni-item">ALT University</div>
+                <div class="uni-item">Anhalt International University</div>
+                <div class="uni-item">Caspian University</div>
+                <div class="uni-item">De Montfort University Kazakhstan</div>
+                <div class="uni-item">META University</div>
+                <div class="uni-item">Satbayev University</div>
+                <div class="uni-item">SDU University</div>
+                <div class="uni-item">Академия гражданской авиации</div>
+                <div class="uni-item">Алматинский гуманитарно-экономический университет</div>
+                <div class="uni-item">Алматинский технологический университет</div>
+                <div class="uni-item">Алматинский университет энергетики и связи им. Г.Даукеева</div>
+                <div class="uni-item">Казахская национальная академия искусств имени Темирбека Жургенова</div>
+                <div class="uni-item">Казахский национальный аграрный исследовательский университет</div>
+                <div class="uni-item">Казахский национальный медицинский университет им. С.Д. Асфендиярова</div>
+                <div class="uni-item">Казахский национальный педагогический университет им. Абая</div>
+                <div class="uni-item">Казахский национальный университет им. аль-Фараби</div>
+                <div class="uni-item">Казахстанско-Британский технический университет</div>
+                <div class="uni-item">Международная образовательная корпорация</div>
+                <div class="uni-item">Международный университет информационных технологий</div>
+                <div class="uni-item">Университет Нархоз</div>
+                <div class="uni-item">Университет «Туран»</div>
+                <div class="uni-item">Университет КИМЭП</div>
+                <div class="uni-item">Университет Кунаева</div>
+                <div class="uni-item">Университет Международного Бизнеса имени Кенжегали Сагадиева</div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Gender Bottom Sheet -->
+    <div id="gender-bottom-sheet" class="bottom-sheet">
+        <div class="sheet-overlay" id="close-gender-sheet"></div>
+        <div class="sheet-content auto-height" style="height: 30%;">
+            <div class="sheet-header">
+                <div class="sheet-drag-handle"></div>
+                <h3 style="text-align:center; font-size:1.1rem; padding-bottom:10px;">Выберите пол</h3>
+            </div>
+            <div class="sheet-list">
+                <div class="uni-item option-item" data-value="Мужской">Мужской</div>
+                <div class="uni-item option-item" data-value="Женский">Женский</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Date Bottom Sheet -->
+    <div id="date-bottom-sheet" class="bottom-sheet">
+        <div class="sheet-overlay" id="close-date-sheet"></div>
+        <div class="sheet-content auto-height date-sheet-content" style="height: 50%;">
+            <div class="sheet-header">
+                <div class="sheet-drag-handle"></div>
+                <h3 style="text-align:center; font-size:1.1rem; padding-bottom:10px;">Дата рождения</h3>
+            </div>
+            <div class="date-picker-wrapper">
+                <div class="date-picker-highlight"></div>
+                <div class="date-picker-container">
+                    <div class="date-col" id="col-day"></div>
+                    <div class="date-col" id="col-month"></div>
+                    <div class="date-col" id="col-year"></div>
+                </div>
+            </div>
+            <div style="padding: 15px 20px;">
+                <button id="btn-confirm-date" class="btn-primary" style="margin:0;">Подтвердить</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Specialty Bottom Sheet -->
+    <div id="spec-bottom-sheet" class="bottom-sheet">
+        <div class="sheet-overlay" id="close-spec-sheet"></div>
+        <div class="sheet-content">
+            <div class="sheet-header">
+                <div class="sheet-drag-handle"></div>
+                <div class="search-container">
+                    <input type="text" id="spec-search" class="sheet-search" placeholder="Поиск специальности 1 символом...">
+                    <button id="spec-search-clear" class="btn-clear-search" style="display:none;">✕</button>
+                </div>
+            </div>
+            <div class="sheet-list" id="spec-list">
+                <!-- Dynamically populated from data.js -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+    
+    <script src="data.js?v=1"></script>
+    <script src="app.js?v=3"></script>
+</body>
+</html>
