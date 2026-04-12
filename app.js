@@ -119,7 +119,7 @@ setTimeout(() => {
 
 // ── EmailJS Config ────────────────────────────────────────
 const EMAILJS_SERVICE_ID  = 'service_7yzwv0n';
-const EMAILJS_TEMPLATE_ID = '7xyd04o';
+const EMAILJS_TEMPLATE_ID = 'template_siv9lk8';
 const EMAILJS_PUBLIC_KEY  = '3cy3hBqQ4qfrK_6Eu';
 
 // Инициализация EmailJS
@@ -135,7 +135,7 @@ function loadEmailJS() {
             return;
         }
         const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
+        script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js';
         script.onload = () => {
             emailjs.init(EMAILJS_PUBLIC_KEY);
             emailjsReady = true;
