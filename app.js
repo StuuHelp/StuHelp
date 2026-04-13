@@ -1,3 +1,23 @@
+// =========================================
+// FIREBASE CONFIG
+// =========================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCnD4eOT-5GP3G_GoM0egblaosY9LzGHeQ",
+    authDomain: "stuhelp-bb382.firebaseapp.com",
+    projectId: "stuhelp-bb382",
+    storageBucket: "stuhelp-bb382.firebasestorage.app",
+    messagingSenderId: "136284774173",
+    appId: "1:136284774173:web:c11e1fc801f15b76680bf4",
+    measurementId: "G-CY183LMXDX"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
+
+// =========================================
 // Push Notifications & Service Worker Logic
 let swRegistration = null;
 
@@ -691,11 +711,32 @@ if(screenCreateAd) screens['createAd'] = screenCreateAd;
 const btnOpenCreateAd = document.getElementById('btn-open-create-ad');
 const btnCreateAdBack = document.getElementById('btn-create-ad-back');
 
-let myAdsData = JSON.parse(localStorage.getItem('myAds'));
-let myAds = myAdsData || [];
+let myAds = []; // will be loaded from Firebase
+let allFirebaseAds = []; // ALL ads from all users
 let stuhelpResponses = JSON.parse(localStorage.getItem('stuhelp_responses')) || [];
 let stuhelpChats = JSON.parse(localStorage.getItem('stuhelp_chats')) || [];
 let editingAdId = null;
+let editingAdFirebaseId = null; // Firebase document ID for editing
+
+// Load ALL ads from Firebase in real-time
+function initFirebaseAds() {
+    const adsQuery = query(collection(db, 'ads'), orderBy('createdAt', 'desc'));
+    onSnapshot(adsQuery, (snapshot) => {
+        allFirebaseAds = [];
+        myAds = [];
+        const currentUserEmail = localStorage.getItem('user_email') || '';
+        snapshot.forEach(docSnap => {
+            const ad = { ...docSnap.data(), firebaseId: docSnap.id };
+            allFirebaseAds.push(ad);
+            if (ad.authorEmail === currentUserEmail) {
+                myAds.push(ad);
+            }
+        });
+        renderAds();
+        renderMessages();
+        renderChats();
+    });
+}
 
 if(btnOpenCreateAd) btnOpenCreateAd.addEventListener('click', () => {
     editingAdId = null;
@@ -758,11 +799,12 @@ document.getElementById('btn-cancel-delete')?.addEventListener('click', () => {
 });
 document.getElementById('btn-confirm-delete')?.addEventListener('click', () => {
     if (deletingAdId !== null) {
-        myAds = myAds.filter(a => a.id != deletingAdId);
-        localStorage.setItem('myAds', JSON.stringify(myAds));
-        renderAds();
-        const toastContainer = document.getElementById('toast-container');
-        if(toastContainer) showToast("Объявление удалено");
+        const adToDelete = myAds.find(a => a.id == deletingAdId);
+        if (adToDelete && adToDelete.firebaseId) {
+            deleteDoc(doc(db, 'ads', adToDelete.firebaseId))
+                .then(() => showToast("Объявление удалено"))
+                .catch(() => showToast("Ошибка при удалении"));
+        }
     }
     deletingAdId = null;
     if(deleteModal) {
@@ -814,7 +856,7 @@ function renderAds() {
 
     if(feedContainer) {
         feedContainer.innerHTML = '';
-        const allAds = [...myAds]; // myAds are usually newer, but let's reverse to show latest at top
+        const allAds = [...allFirebaseAds]; // ALL ads from ALL users via Firebase
         
         allAds.forEach(ad => {
             let urgText = '';
@@ -845,7 +887,7 @@ function renderAds() {
     }
 }
 document.addEventListener('DOMContentLoaded', () => {
-    renderAds();
+    initFirebaseAds(); // loads all ads from Firebase in real-time
     renderMessages();
     renderChats();
 });
@@ -895,15 +937,15 @@ if(btnPublishAd && feedContainer) {
 
 
         if (editingAdId !== null) {
-            // Update
-            const index = myAds.findIndex(a => a.id == editingAdId);
-            if(index !== -1) {
-                myAds[index] = { ...myAds[index], specialty, description, price, urgency };
-                const toastContainer = document.getElementById('toast-container');
-                if(toastContainer) showToast("Объявление обновлено!");
+            // Update in Firebase
+            const adToUpdate = myAds.find(a => a.id == editingAdId);
+            if (adToUpdate && adToUpdate.firebaseId) {
+                updateDoc(doc(db, 'ads', adToUpdate.firebaseId), { specialty, description, price, urgency })
+                    .then(() => showToast("Объявление обновлено!"))
+                    .catch(() => showToast("Ошибка при обновлении"));
             }
         } else {
-            // Create new
+            // Save new ad to Firebase
             const authorEmail = localStorage.getItem('user_email') || 'test@test.com';
             const authorName = (userData.firstName || 'Имя') + ' ' + (userData.lastName || 'Фамилия');
             const authorUni = userData.uni || 'Университет не выбран';
@@ -916,23 +958,22 @@ if(btnPublishAd && feedContainer) {
                 urgency,
                 authorEmail,
                 authorName,
-                authorUni
+                authorUni,
+                createdAt: Date.now()
             };
-            myAds.push(newAd);
-            const toastContainer = document.getElementById('toast-container');
-            if(toastContainer) showToast("Объявление опубликовано!");
-            
-            // Simulate Web Push if permission granted
-            if (Notification.permission === 'granted' && swRegistration) {
-                swRegistration.showNotification('Объявление опубликовано!', {
-                    body: `Ваше задание по специальности "${specialty}" успешно размещено.`,
-                    icon: "https://img.icons8.com/color/48/000000/info--v1.png"
-                });
-            }
+
+            addDoc(collection(db, 'ads'), newAd)
+                .then(() => {
+                    showToast("Объявление опубликовано!");
+                    if (Notification.permission === 'granted' && swRegistration) {
+                        swRegistration.showNotification('Объявление опубликовано!', {
+                            body: `Ваше задание по специальности "${specialty}" успешно размещено.`,
+                            icon: "https://img.icons8.com/color/48/000000/info--v1.png"
+                        });
+                    }
+                })
+                .catch(() => showToast("Ошибка при публикации"));
         }
-        
-        localStorage.setItem('myAds', JSON.stringify(myAds));
-        renderAds();
 
         // Navigate and switch tabs
         navigateTo('screen-main');
@@ -1123,7 +1164,7 @@ if(specSearch) {
 // =========================================
 
 function handleRespond(adId) {
-    const allAds = [...myAds];
+    const allAds = [...allFirebaseAds];
     const ad = allAds.find(a => a.id == adId);
     if (!ad) return;
 
@@ -1160,7 +1201,7 @@ function handleRespond(adId) {
 }
 
 function handleContact(adId) {
-    const allAds = [...myAds];
+    const allAds = [...allFirebaseAds];
     const ad = allAds.find(a => a.id == adId);
     if (!ad) return;
 
