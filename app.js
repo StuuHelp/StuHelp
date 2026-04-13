@@ -61,25 +61,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const welcomeModal = document.getElementById('welcome-modal');
     const btnEnter = document.getElementById('btn-enter-stuhelp');
     
-    if (welcomeModal && btnEnter) {
+    if (welcomeModal) {
         const hasWelcomed = localStorage.getItem('stuhelp_welcomed') === '1';
         if (!hasWelcomed) {
-            // Show modal (remove hidden-modal class) after Splash Screen (800ms + 400ms)
+            // Show modal after splash
             setTimeout(() => {
                 welcomeModal.classList.remove('hidden-modal');
+                welcomeModal.style.display = 'flex';
             }, 1200);
-            
-            btnEnter.addEventListener('click', () => {
+        } else {
+            // Already visited - hide immediately
+            welcomeModal.style.display = 'none';
+            welcomeModal.classList.add('hidden-modal');
+        }
+    }
+
+    if (btnEnter) {
+        btnEnter.addEventListener('click', () => {
+            const welcomeModal = document.getElementById('welcome-modal');
+            if (welcomeModal) {
                 welcomeModal.classList.add('hidden-modal');
                 localStorage.setItem('stuhelp_welcomed', '1');
                 setTimeout(() => {
                     welcomeModal.style.display = 'none';
                 }, 500);
-            });
-        } else {
-            // Immediately hide if already visited
-            welcomeModal.style.display = 'none';
-        }
+            }
+        });
     }
     
     // Banner listeners
