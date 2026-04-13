@@ -720,18 +720,20 @@ const btnCreateAdBack = document.getElementById('btn-create-ad-back');
 
 let myAds = []; // will be loaded from Firebase
 let allFirebaseAds = []; // ALL ads from all users
-let stuhelpResponses = JSON.parse(localStorage.getItem('stuhelp_responses')) || [];
-let stuhelpChats = JSON.parse(localStorage.getItem('stuhelp_chats')) || [];
+let stuhelpResponses = [];
+let stuhelpChats = [];
 let editingAdId = null;
 let editingAdFirebaseId = null; // Firebase document ID for editing
 
-// Load ALL ads from Firebase in real-time
-function initFirebaseAds() {
+// Load Data from Firebase in real-time
+function initFirebaseListeners() {
+    const currentUserEmail = localStorage.getItem('user_email') || '';
+    
+    // Ads Listener
     const adsQuery = query(collection(db, 'ads'), orderBy('createdAt', 'desc'));
     onSnapshot(adsQuery, (snapshot) => {
         allFirebaseAds = [];
         myAds = [];
-        const currentUserEmail = localStorage.getItem('user_email') || '';
         snapshot.forEach(docSnap => {
             const ad = { ...docSnap.data(), firebaseId: docSnap.id };
             allFirebaseAds.push(ad);
@@ -740,8 +742,27 @@ function initFirebaseAds() {
             }
         });
         renderAds();
+    });
+
+    // Responses Listener
+    const responsesQuery = query(collection(db, 'responses'), orderBy('id', 'desc'));
+    onSnapshot(responsesQuery, (snapshot) => {
+        stuhelpResponses = [];
+        snapshot.forEach(docSnap => {
+            stuhelpResponses.push({ ...docSnap.data(), firebaseId: docSnap.id });
+        });
         renderMessages();
+    });
+
+    // Chats Listener
+    const chatsQuery = query(collection(db, 'chats'), orderBy('lastUpdated', 'desc'));
+    onSnapshot(chatsQuery, (snapshot) => {
+        stuhelpChats = [];
+        snapshot.forEach(docSnap => {
+            stuhelpChats.push({ ...docSnap.data(), firebaseId: docSnap.id });
+        });
         renderChats();
+        if (currentChatId) renderChatMessages(); // update open chat real-time
     });
 }
 
@@ -894,9 +915,7 @@ function renderAds() {
     }
 }
 document.addEventListener('DOMContentLoaded', () => {
-    initFirebaseAds(); // loads all ads from Firebase in real-time
-    renderMessages();
-    renderChats();
+    initFirebaseListeners(); // loads ads, responses, chats in real-time
 });
 
 // Form Logic: Character counter
@@ -1203,11 +1222,14 @@ window.handleRespond = function handleRespond(adId) {
         timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ', ' + new Date().toLocaleDateString()
     };
 
-    stuhelpResponses.push(newResponse);
-    localStorage.setItem('stuhelp_responses', JSON.stringify(stuhelpResponses));
-    
-    showToast('Вы откликнулись на задание!');
-    renderMessages();
+    addDoc(collection(db, 'responses'), newResponse)
+        .then(() => {
+            showToast('Вы откликнулись на задание!');
+        })
+        .catch(err => {
+            console.error(err);
+            showToast('Ошибка при отправке отклика');
+        });
 }
 
 window.handleContact = function handleContact(adId) {
@@ -1231,8 +1253,12 @@ window.handleContact = function handleContact(adId) {
     const currentUserName = (userData.firstName || 'Имя') + ' ' + (userData.lastName || 'Фамилия');
     const currentUserUni = userData.uni || 'Университет не выбран';
 
+    // Select the chat tab automatically
+    const chatTabBtn = document.querySelector('.nav-item[data-target="tab-chat"]');
+    if(chatTabBtn) chatTabBtn.click();
+
     if (!chat) {
-        // Create new chat
+        // Create new chat in Firebase
         chat = {
             id: 'chat_' + Date.now(),
             user1Email: currentUserEmail,
@@ -1241,19 +1267,16 @@ window.handleContact = function handleContact(adId) {
             user2Email: ad.authorEmail,
             user2Name: ad.authorName,
             user2Uni: ad.authorUni,
+            lastUpdated: Date.now(),
             messages: []
         };
-        stuhelpChats.push(chat);
-        localStorage.setItem('stuhelp_chats', JSON.stringify(stuhelpChats));
-        renderChats();
+        
+        addDoc(collection(db, 'chats'), chat)
+            .then(() => openChatRoom(chat.id))
+            .catch(err => showToast("Ошибка при создании чата"));
+    } else {
+        openChatRoom(chat.id);
     }
-
-    // Select the chat tab automatically
-    const chatTabBtn = document.querySelector('.nav-item[data-target="tab-chat"]');
-    if(chatTabBtn) chatTabBtn.click();
-
-    // Go to chat room directly
-    openChatRoom(chat.id);
 }
 
 // =========================================
@@ -1356,15 +1379,16 @@ function openChatRoom(chatId) {
 
     // Mark unread incoming messages as read
     let updated = false;
-    chat.messages.forEach(m => {
+    const newMessages = chat.messages.map(m => {
         if (m.senderEmail !== currentUserEmail && !m.isRead) {
-            m.isRead = true;
             updated = true;
+            return { ...m, isRead: true };
         }
+        return m;
     });
-    if (updated) {
-        localStorage.setItem('stuhelp_chats', JSON.stringify(stuhelpChats));
-        renderChats(); // to update read status in the main list if applicable
+
+    if (updated && chat.firebaseId) {
+        updateDoc(doc(db, 'chats', chat.firebaseId), { messages: newMessages });
     }
 
     const chatRoomName = document.getElementById('chat-room-name');
@@ -1465,11 +1489,16 @@ function sendMessage() {
         isRead: false
     };
 
-    chat.messages.push(newMsg);
-    localStorage.setItem('stuhelp_chats', JSON.stringify(stuhelpChats));
+    const updatedMessages = [...chat.messages, newMsg];
+    
+    if (chat.firebaseId) {
+        updateDoc(doc(db, 'chats', chat.firebaseId), { 
+            messages: updatedMessages,
+            lastUpdated: Date.now()
+        }).catch(err => showToast('Ошибка при отправке'));
+    }
     
     chatInputField.value = '';
-    renderChatMessages();
 }
 
 if (btnSendMessage) {
