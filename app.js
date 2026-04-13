@@ -1170,7 +1170,7 @@ if(specSearch) {
 // INTERACTION LOGIC (Respond / Contact)
 // =========================================
 
-function handleRespond(adId) {
+window.handleRespond = function handleRespond(adId) {
     const allAds = [...allFirebaseAds];
     const ad = allAds.find(a => a.id == adId);
     if (!ad) return;
@@ -1207,7 +1207,7 @@ function handleRespond(adId) {
     renderMessages();
 }
 
-function handleContact(adId) {
+window.handleContact = function handleContact(adId) {
     const allAds = [...allFirebaseAds];
     const ad = allAds.find(a => a.id == adId);
     if (!ad) return;
