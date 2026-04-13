@@ -1176,8 +1176,11 @@ window.handleRespond = function handleRespond(adId) {
     if (!ad) return;
 
     const currentUserEmail = localStorage.getItem('user_email') || 'test@test.com';
-    // Own ad protection - do nothing silently
-    if (ad.authorEmail === currentUserEmail) return;
+    // Own ad protection - show toast instead of failing silently
+    if (ad.authorEmail === currentUserEmail) {
+        showToast('Вы не можете откликнуться на свое объявление!');
+        return;
+    }
 
     // Check if already responded
     const alreadyResponded = stuhelpResponses.find(r => r.adId == adId && r.responderEmail === currentUserEmail);
@@ -1213,8 +1216,11 @@ window.handleContact = function handleContact(adId) {
     if (!ad) return;
 
     const currentUserEmail = localStorage.getItem('user_email') || 'test@test.com';
-    // Own ad protection - do nothing silently
-    if (ad.authorEmail === currentUserEmail) return;
+    // Own ad protection - show toast instead of failing silently
+    if (ad.authorEmail === currentUserEmail) {
+        showToast('Вы не можете связаться сами с собой!');
+        return;
+    }
 
     // Check if chat already exists
     let chat = stuhelpChats.find(c => 
