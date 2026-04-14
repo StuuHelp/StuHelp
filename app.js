@@ -56,79 +56,20 @@ function checkPushBanner() {
     }
 }
 
-// Welcome Modal Logic
-document.addEventListener('DOMContentLoaded', () => {
-    const welcomeModal = document.getElementById('welcome-modal');
-    const btnEnter = document.getElementById('btn-enter-stuhelp');
-    
-    if (welcomeModal) {
-        const hasWelcomed = localStorage.getItem('stuhelp_welcomed') === '1';
-        if (!hasWelcomed) {
-            // Show modal after splash
-            setTimeout(() => {
-                welcomeModal.classList.remove('hidden-modal');
-                welcomeModal.style.display = 'flex';
-            }, 1200);
-        } else {
-            // Already visited - hide immediately
-            welcomeModal.style.display = 'none';
-            welcomeModal.classList.add('hidden-modal');
-        }
-    }
+// Screen Management (глобальные переменные)
+let screens = {};
 
-    if (btnEnter) {
-        btnEnter.addEventListener('click', () => {
-            const welcomeModal = document.getElementById('welcome-modal');
-            if (welcomeModal) {
-                welcomeModal.classList.add('hidden-modal');
-                localStorage.setItem('stuhelp_welcomed', '1');
-                setTimeout(() => {
-                    welcomeModal.style.display = 'none';
-                }, 500);
-            }
-        });
-    }
-    
-    // Banner listeners
-    const btnYes = document.getElementById('btn-push-yes');
-    const btnNo = document.getElementById('btn-push-no');
-    const banner = document.getElementById('push-banner');
-
-    if (btnYes && btnNo && banner) {
-        btnYes.addEventListener('click', () => {
-            Notification.requestPermission().then(perm => {
-                if(perm === 'granted') {
-                    showToast('Уведомления включены!');
-                }
-                localStorage.setItem('push_asked', 'true');
-                banner.classList.add('hidden');
-            });
-        });
-
-        btnNo.addEventListener('click', () => {
-            localStorage.setItem('push_asked', 'true');
-            banner.classList.add('hidden');
-        });
-    }
-    
-    // Generic event delegation removed. Replaced by handleRespond and handleContact inline.
-});
-
-// Screen Management
-const screens = {
-    splash: document.getElementById('screen-splash'),
-    register: document.getElementById('screen-register'),
-    otp: document.getElementById('screen-otp'),
-    profile: document.getElementById('screen-profile'),
-    main: document.getElementById('screen-main'),
-    editProfile: document.getElementById('screen-edit-profile'),
-    createAd: document.getElementById('screen-create-ad'),
-    chatRoom: document.getElementById('screen-chat-room')
+const userData = {
+    firstName: '',
+    lastName: '',
+    gender: '',
+    birthdate: '',
+    uni: ''
 };
 
 function navigateTo(targetScreenId) {
     Object.values(screens).forEach(screen => {
-        if (!screen) return; // skip null screens
+        if (!screen) return;
         if (screen.id === targetScreenId) {
             screen.classList.remove('slide-right', 'slide-left');
             screen.classList.add('active');
@@ -140,67 +81,118 @@ function navigateTo(targetScreenId) {
     });
 }
 
-// User Data Store
-const userData = {
-    firstName: '',
-    lastName: '',
-    gender: '',
-    birthdate: '',
-    uni: ''
-};
+// Весь код запускается после загрузки страницы
+document.addEventListener('DOMContentLoaded', () => {
 
-// 1. Splash Screen Logic & Session Check
-let bypassSplash = false;
-const savedStore = localStorage.getItem('stuhelp_user');
-if (localStorage.getItem('stuhelp_logged_in') === 'true' && savedStore) {
-    try {
-        const parsed = JSON.parse(savedStore);
-        userData.firstName = parsed.firstName || '';
-        userData.lastName = parsed.lastName || '';
-        userData.gender = parsed.gender || '';
-        userData.birthdate = parsed.birthdate || '';
-        userData.uni = parsed.university || '';
-        
-        // Update displays immediately
-        document.getElementById('display-name').textContent = (userData.firstName || 'Имя') + ' ' + (userData.lastName || 'Фамилия');
-        document.getElementById('display-uni').textContent = userData.uni || 'Университет не выбран';
-        
-        // Pre-fill edit profile form
-        const editFirstName = document.getElementById('edit-first-name');
-        const editLastName = document.getElementById('edit-last-name');
-        const editGender = document.getElementById('edit-gender');
-        const editBirthdate = document.getElementById('edit-birthdate');
-        const editUni = document.getElementById('edit-uni');
-        if(editFirstName) editFirstName.value = userData.firstName;
-        if(editLastName) editLastName.value = userData.lastName;
-        if(editGender) editGender.value = userData.gender;
-        if(editBirthdate) editBirthdate.value = userData.birthdate;
-        if(editUni) editUni.value = userData.uni;
+    // Инициализация экранов
+    screens = {
+        splash: document.getElementById('screen-splash'),
+        register: document.getElementById('screen-register'),
+        otp: document.getElementById('screen-otp'),
+        profile: document.getElementById('screen-profile'),
+        main: document.getElementById('screen-main'),
+        editProfile: document.getElementById('screen-edit-profile'),
+        createAd: document.getElementById('screen-create-ad'),
+        chatRoom: document.getElementById('screen-chat-room')
+    };
 
-        bypassSplash = true;
-        
-        // Instantly hide splash and transition to main
-        if (screens.splash) {
-            screens.splash.style.display = 'none';
+    // Welcome Modal
+    const welcomeModal = document.getElementById('welcome-modal');
+    const btnEnter = document.getElementById('btn-enter-stuhelp');
+
+    if (welcomeModal) {
+        const hasWelcomed = localStorage.getItem('stuhelp_welcomed') === '1';
+        if (!hasWelcomed) {
+            setTimeout(() => {
+                welcomeModal.classList.remove('hidden-modal');
+                welcomeModal.style.display = 'flex';
+            }, 1200);
+        } else {
+            welcomeModal.style.display = 'none';
+            welcomeModal.classList.add('hidden-modal');
         }
-        
-        setTimeout(() => {
-            navigateTo('screen-main');
-        }, 10);
-    } catch(err) {
-        console.error("Session parse err:", err);
     }
-}
 
-if (!bypassSplash) {
-    setTimeout(() => {
-        if (screens.splash) {
-            screens.splash.style.display = 'flex'; // restore just in case
-            screens.splash.classList.add('fade-out');
+    if (btnEnter) {
+        btnEnter.addEventListener('click', () => {
+            if (welcomeModal) {
+                welcomeModal.classList.add('hidden-modal');
+                localStorage.setItem('stuhelp_welcomed', '1');
+                setTimeout(() => { welcomeModal.style.display = 'none'; }, 500);
+            }
+        });
+    }
+
+    // Push banner
+    const btnYes = document.getElementById('btn-push-yes');
+    const btnNo = document.getElementById('btn-push-no');
+    const banner = document.getElementById('push-banner');
+
+    if (btnYes && btnNo && banner) {
+        btnYes.addEventListener('click', () => {
+            Notification.requestPermission().then(perm => {
+                if(perm === 'granted') showToast('Уведомления включены!');
+                localStorage.setItem('push_asked', 'true');
+                banner.classList.add('hidden');
+            });
+        });
+        btnNo.addEventListener('click', () => {
+            localStorage.setItem('push_asked', 'true');
+            banner.classList.add('hidden');
+        });
+    }
+
+    // Splash Screen & Session Check
+    let bypassSplash = false;
+    const savedStore = localStorage.getItem('stuhelp_user');
+    if (localStorage.getItem('stuhelp_logged_in') === 'true' && savedStore) {
+        try {
+            const parsed = JSON.parse(savedStore);
+            userData.firstName = parsed.firstName || '';
+            userData.lastName = parsed.lastName || '';
+            userData.gender = parsed.gender || '';
+            userData.birthdate = parsed.birthdate || '';
+            userData.uni = parsed.university || '';
+
+            const dispName = document.getElementById('display-name');
+            const dispUni = document.getElementById('display-uni');
+            if(dispName) dispName.textContent = (userData.firstName || 'Имя') + ' ' + (userData.lastName || 'Фамилия');
+            if(dispUni) dispUni.textContent = userData.uni || 'Университет не выбран';
+
+            const editFirstName = document.getElementById('edit-first-name');
+            const editLastName = document.getElementById('edit-last-name');
+            const editGender = document.getElementById('edit-gender');
+            const editBirthdate = document.getElementById('edit-birthdate');
+            const editUni = document.getElementById('edit-uni');
+            if(editFirstName) editFirstName.value = userData.firstName;
+            if(editLastName) editLastName.value = userData.lastName;
+            if(editGender) editGender.value = userData.gender;
+            if(editBirthdate) editBirthdate.value = userData.birthdate;
+            if(editUni) editUni.value = userData.uni;
+
+            bypassSplash = true;
+            if (screens.splash) screens.splash.style.display = 'none';
+            setTimeout(() => navigateTo('screen-main'), 10);
+        } catch(err) {
+            console.error("Session parse err:", err);
         }
-        setTimeout(() => navigateTo('screen-register'), 400);
-    }, 800);
-}
+    }
+
+    if (!bypassSplash) {
+        setTimeout(() => {
+            if (screens.splash) {
+                screens.splash.style.display = 'flex';
+                screens.splash.classList.add('fade-out');
+            }
+            setTimeout(() => navigateTo('screen-register'), 400);
+        }, 800);
+    }
+
+    // Firebase ads + render
+    initFirebaseAds();
+    renderMessages();
+    renderChats();
+});
 
 // ── EmailJS Config ────────────────────────────────────────
 const EMAILJS_SERVICE_ID  = 'service_7yzwv0n';
@@ -914,9 +906,7 @@ function renderAds() {
         });
     }
 }
-document.addEventListener('DOMContentLoaded', () => {
-    initFirebaseListeners(); // loads ads, responses, chats in real-time
-});
+// initFirebaseAds уже вызывается в основном DOMContentLoaded выше
 
 // Form Logic: Character counter
 const adDescription = document.getElementById('ad-description');
@@ -1034,23 +1024,6 @@ filterPills.forEach(pill => {
         }
     });
 });
-
-function filterFeed(urgencyFilter) {
-    if(!feedContainer) return;
-    const cards = feedContainer.querySelectorAll('.ad-card');
-    cards.forEach(card => {
-        if (urgencyFilter === 'all') {
-            card.style.display = 'block';
-        } else {
-            const cardUrgency = card.getAttribute('data-urgency');
-            if (cardUrgency === urgencyFilter) {
-                card.style.display = 'block';
-            } else {
-                card.style.display = 'none';
-            }
-        }
-    });
-}
 
 // Specialty Bottom Sheet Logic
 const specBottomSheet = document.getElementById('spec-bottom-sheet');
