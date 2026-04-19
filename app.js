@@ -188,15 +188,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 800);
     }
 
-    try {
-        // Firebase ads + render
-        initFirebaseListeners();
-        renderMessages();
-        renderChats();
-    } catch(err) {
-        console.error("Firebase init err:", err);
-        showToast("Ошибка базы: " + err.message);
-    }
+    // Firebase ads + render
+    initFirebaseListeners();
+    renderMessages();
+    renderChats();
 });
 
 // ── EmailJS Config ────────────────────────────────────────
@@ -428,6 +423,8 @@ btnProfileNext.addEventListener('click', () => {
             registeredAt: Date.now()
         }));
         localStorage.setItem('stuhelp_logged_in', 'true');
+        // Перезапускаем Firebase-листенеры, чтобы currentUserEmail стал актуальным
+        // и фильтр "Мои объявления" заработал сразу после регистрации
         try { initFirebaseListeners(); } catch(e) { console.error('Firebase re-init error:', e); }
         navigateTo('screen-main');
     }
@@ -727,46 +724,41 @@ let editingAdFirebaseId = null; // Firebase document ID for editing
 function initFirebaseListeners() {
     const currentUserEmail = localStorage.getItem('user_email') || '';
     
-    try {
-        // Ads Listener
-        const adsQuery = query(collection(db, 'ads'), orderBy('createdAt', 'desc'));
-        onSnapshot(adsQuery, (snapshot) => {
-            allFirebaseAds = [];
-            myAds = [];
-            snapshot.forEach(docSnap => {
-                const ad = { ...docSnap.data(), firebaseId: docSnap.id };
-                allFirebaseAds.push(ad);
-                if (ad.authorEmail === currentUserEmail) {
-                    myAds.push(ad);
-                }
-            });
-            renderAds();
+    // Ads Listener
+    const adsQuery = query(collection(db, 'ads'), orderBy('createdAt', 'desc'));
+    onSnapshot(adsQuery, (snapshot) => {
+        allFirebaseAds = [];
+        myAds = [];
+        snapshot.forEach(docSnap => {
+            const ad = { ...docSnap.data(), firebaseId: docSnap.id };
+            allFirebaseAds.push(ad);
+            if (ad.authorEmail === currentUserEmail) {
+                myAds.push(ad);
+            }
         });
+        renderAds();
+    });
 
-        // Responses Listener
-        const responsesQuery = query(collection(db, 'responses'), orderBy('id', 'desc'));
-        onSnapshot(responsesQuery, (snapshot) => {
-            stuhelpResponses = [];
-            snapshot.forEach(docSnap => {
-                stuhelpResponses.push({ ...docSnap.data(), firebaseId: docSnap.id });
-            });
-            renderMessages();
+    // Responses Listener
+    const responsesQuery = query(collection(db, 'responses'), orderBy('id', 'desc'));
+    onSnapshot(responsesQuery, (snapshot) => {
+        stuhelpResponses = [];
+        snapshot.forEach(docSnap => {
+            stuhelpResponses.push({ ...docSnap.data(), firebaseId: docSnap.id });
         });
+        renderMessages();
+    });
 
-        // Chats Listener
-        const chatsQuery = query(collection(db, 'chats'), orderBy('lastUpdated', 'desc'));
-        onSnapshot(chatsQuery, (snapshot) => {
-            stuhelpChats = [];
-            snapshot.forEach(docSnap => {
-                stuhelpChats.push({ ...docSnap.data(), firebaseId: docSnap.id });
-            });
-            renderChats();
-            if (currentChatId) renderChatMessages(); // update open chat real-time
+    // Chats Listener
+    const chatsQuery = query(collection(db, 'chats'), orderBy('lastUpdated', 'desc'));
+    onSnapshot(chatsQuery, (snapshot) => {
+        stuhelpChats = [];
+        snapshot.forEach(docSnap => {
+            stuhelpChats.push({ ...docSnap.data(), firebaseId: docSnap.id });
         });
-    } catch (firebaseErr) {
-        console.error("Critical Firebase Listener Error:", firebaseErr);
-        if(typeof showToast === 'function') showToast("Firebase Error: " + firebaseErr.message);
-    }
+        renderChats();
+        if (currentChatId) renderChatMessages(); // update open chat real-time
+    });
 }
 
 if(btnOpenCreateAd) btnOpenCreateAd.addEventListener('click', () => {
@@ -1295,6 +1287,7 @@ function renderMessages() {
     [...myIncomingResponses].reverse().forEach(resp => {
         const card = document.createElement('div');
         card.className = 'response-card fade-slide-in';
+        const respId = resp.firebaseId || '';
         card.innerHTML = `
             <div class="response-header">
                 <div class="response-name">${resp.responderName}</div>
@@ -1302,9 +1295,53 @@ function renderMessages() {
             </div>
             <div class="response-uni">${resp.responderUni}</div>
             <div class="response-spec">${resp.adSpecialty}</div>
+            <button class="btn-card primary" style="margin-top: 12px;" onclick="handleContactResponder('${respId}')">Связаться</button>
         `;
         container.appendChild(card);
     });
+}
+
+// Начать чат с пользователем, который откликнулся на твоё объявление
+window.handleContactResponder = function handleContactResponder(responseFirebaseId) {
+    const resp = stuhelpResponses.find(r => r.firebaseId === responseFirebaseId);
+    if (!resp) {
+        showToast('Отклик не найден');
+        return;
+    }
+
+    const currentUserEmail = localStorage.getItem('user_email') || 'test@test.com';
+    const currentUserName = (userData.firstName || 'Имя') + ' ' + (userData.lastName || 'Фамилия');
+    const currentUserUni = userData.uni || 'Университет не выбран';
+
+    // Проверяем, нет ли уже чата с этим пользователем
+    let chat = stuhelpChats.find(c =>
+        (c.user1Email === currentUserEmail && c.user2Email === resp.responderEmail) ||
+        (c.user1Email === resp.responderEmail && c.user2Email === currentUserEmail)
+    );
+
+    // Переключаемся на вкладку чатов
+    const chatTabBtn = document.querySelector('.nav-item[data-target="tab-chat"]');
+    if(chatTabBtn) chatTabBtn.click();
+
+    if (!chat) {
+        chat = {
+            id: 'chat_' + Date.now(),
+            user1Email: currentUserEmail,
+            user1Name: currentUserName,
+            user1Uni: currentUserUni,
+            user2Email: resp.responderEmail,
+            user2Name: resp.responderName,
+            user2Uni: resp.responderUni,
+            lastUpdated: Date.now(),
+            messages: []
+        };
+
+        addDoc(collection(db, 'chats'), chat)
+            .then(() => openChatRoom(chat.id))
+            .catch(err => showToast("Ошибка при создании чата"));
+    } else {
+        openChatRoom(chat.id);
+    }
 }
 
 // =========================================
