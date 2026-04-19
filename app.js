@@ -188,10 +188,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 800);
     }
 
-    // Firebase ads + render
-    initFirebaseAds();
-    renderMessages();
-    renderChats();
+    try {
+        // Firebase ads + render
+        initFirebaseListeners();
+        renderMessages();
+        renderChats();
+    } catch(err) {
+        console.error("Firebase init err:", err);
+        showToast("Ошибка базы: " + err.message);
+    }
 });
 
 // ── EmailJS Config ────────────────────────────────────────
@@ -423,6 +428,7 @@ btnProfileNext.addEventListener('click', () => {
             registeredAt: Date.now()
         }));
         localStorage.setItem('stuhelp_logged_in', 'true');
+        try { initFirebaseListeners(); } catch(e) { console.error('Firebase re-init error:', e); }
         navigateTo('screen-main');
     }
 });
@@ -721,41 +727,46 @@ let editingAdFirebaseId = null; // Firebase document ID for editing
 function initFirebaseListeners() {
     const currentUserEmail = localStorage.getItem('user_email') || '';
     
-    // Ads Listener
-    const adsQuery = query(collection(db, 'ads'), orderBy('createdAt', 'desc'));
-    onSnapshot(adsQuery, (snapshot) => {
-        allFirebaseAds = [];
-        myAds = [];
-        snapshot.forEach(docSnap => {
-            const ad = { ...docSnap.data(), firebaseId: docSnap.id };
-            allFirebaseAds.push(ad);
-            if (ad.authorEmail === currentUserEmail) {
-                myAds.push(ad);
-            }
+    try {
+        // Ads Listener
+        const adsQuery = query(collection(db, 'ads'), orderBy('createdAt', 'desc'));
+        onSnapshot(adsQuery, (snapshot) => {
+            allFirebaseAds = [];
+            myAds = [];
+            snapshot.forEach(docSnap => {
+                const ad = { ...docSnap.data(), firebaseId: docSnap.id };
+                allFirebaseAds.push(ad);
+                if (ad.authorEmail === currentUserEmail) {
+                    myAds.push(ad);
+                }
+            });
+            renderAds();
         });
-        renderAds();
-    });
 
-    // Responses Listener
-    const responsesQuery = query(collection(db, 'responses'), orderBy('id', 'desc'));
-    onSnapshot(responsesQuery, (snapshot) => {
-        stuhelpResponses = [];
-        snapshot.forEach(docSnap => {
-            stuhelpResponses.push({ ...docSnap.data(), firebaseId: docSnap.id });
+        // Responses Listener
+        const responsesQuery = query(collection(db, 'responses'), orderBy('id', 'desc'));
+        onSnapshot(responsesQuery, (snapshot) => {
+            stuhelpResponses = [];
+            snapshot.forEach(docSnap => {
+                stuhelpResponses.push({ ...docSnap.data(), firebaseId: docSnap.id });
+            });
+            renderMessages();
         });
-        renderMessages();
-    });
 
-    // Chats Listener
-    const chatsQuery = query(collection(db, 'chats'), orderBy('lastUpdated', 'desc'));
-    onSnapshot(chatsQuery, (snapshot) => {
-        stuhelpChats = [];
-        snapshot.forEach(docSnap => {
-            stuhelpChats.push({ ...docSnap.data(), firebaseId: docSnap.id });
+        // Chats Listener
+        const chatsQuery = query(collection(db, 'chats'), orderBy('lastUpdated', 'desc'));
+        onSnapshot(chatsQuery, (snapshot) => {
+            stuhelpChats = [];
+            snapshot.forEach(docSnap => {
+                stuhelpChats.push({ ...docSnap.data(), firebaseId: docSnap.id });
+            });
+            renderChats();
+            if (currentChatId) renderChatMessages(); // update open chat real-time
         });
-        renderChats();
-        if (currentChatId) renderChatMessages(); // update open chat real-time
-    });
+    } catch (firebaseErr) {
+        console.error("Critical Firebase Listener Error:", firebaseErr);
+        if(typeof showToast === 'function') showToast("Firebase Error: " + firebaseErr.message);
+    }
 }
 
 if(btnOpenCreateAd) btnOpenCreateAd.addEventListener('click', () => {
@@ -906,7 +917,7 @@ function renderAds() {
         });
     }
 }
-// initFirebaseAds уже вызывается в основном DOMContentLoaded выше
+// initFirebaseListeners уже вызывается в основном DOMContentLoaded выше
 
 // Form Logic: Character counter
 const adDescription = document.getElementById('ad-description');
@@ -987,18 +998,24 @@ if(btnPublishAd && feedContainer) {
                             icon: "https://img.icons8.com/color/48/000000/info--v1.png"
                         });
                     }
+                    // Навигация только после успешного сохранения
+                    navigateTo('screen-main');
+                    const profileTabBtn = document.querySelector('.nav-item[data-target="tab-profile"]');
+                    if(profileTabBtn) profileTabBtn.click();
+                    const mainContent = document.querySelector('.main-content');
+                    if(mainContent) mainContent.scrollTop = 0;
                 })
-                .catch(() => showToast("Ошибка при публикации"));
+                .catch((err) => {
+                    console.error('Firebase error:', err);
+                    showToast("Ошибка при публикации. Попробуйте снова.");
+                });
+            return; // выходим чтобы не выполнять навигацию ниже
         }
 
-        // Navigate and switch tabs
+        // Navigate and switch tabs (только для редактирования)
         navigateTo('screen-main');
-        
-        // Find and click the profile tab icon to make it active 
         const profileTabBtn = document.querySelector('.nav-item[data-target="tab-profile"]');
         if(profileTabBtn) profileTabBtn.click();
-        
-        // Scroll to top
         const mainContent = document.querySelector('.main-content');
         if(mainContent) mainContent.scrollTop = 0;
     });
